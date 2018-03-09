@@ -4,15 +4,16 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <string.h>
 
 int main(int argc, char **argv) 
 {
 	int opt;
-    int depth = 0;
+    char depth[128];
     while ((opt = getopt(argc, argv, "d:")) != -1) { // Use getopt to parse commandline arguments
         switch (opt) {
         case 'd':
-            depth = atoi(optarg);
+            strcpy(depth, optarg);
             break;
         default: /* '?' */
             fprintf(stderr, "Usage: %s [-d Depth of binary tree]\n", // In case of wrong options
@@ -21,19 +22,11 @@ int main(int argc, char **argv)
         }
     }
 
-    for (; depth > 0; depth--) {
-    	if (fork() != 0) { //If is parent, fork again
-    		if (fork() != 0) break; //If is parent, break loop after 2 forks
-    	}
-    }
-
-
-    if (depth == 0) {
-    	printf("I'm a sorter!\n");
+    if (fork() != 0) {
+        printf("I'm the root!\n");
     } else {
-    	printf("I'm a merger!\n");
+        if (execlp("./node", "./node", "-d", depth, NULL) == -1) perror("Exec failed: ");
     }
-
 
     return 0;
 }
