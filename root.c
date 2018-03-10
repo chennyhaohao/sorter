@@ -5,23 +5,68 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <string.h>
+#include "./record.c"
 
 int main(int argc, char **argv) 
 {
 	int opt;
-    char depth[128];
+    //char depth[56], attr_num[56];
     char buf[1024];
-    while ((opt = getopt(argc, argv, "d:")) != -1) { // Use getopt to parse commandline arguments
+    int attr_num, depth;
+    int argNum = 0;
+    int r_start = 0, r_end = 10;
+    char *ofile;
+    //char *fifo = "./myfifo";
+    
+    FILE * output_fp = fdopen(1, "w");
+    if (output_fp==NULL) {
+        perror("Output file creation error: ");
+        return -1;
+    }
+
+    char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number]\n";
+    while ((opt = getopt(argc, argv, "d:a:o::")) != -1) { // Use getopt to parse commandline arguments
         switch (opt) {
         case 'd':
-            strcpy(depth, optarg);
+            depth = atoi(optarg);
+            if (depth < 0 || depth > 6) {
+                printf("Invalid Depth.\n");
+                return -1;
+            }
+            argNum++;
             break;
+
+        case 'a':
+            attr_num = atoi(optarg);
+            if (attr_num < 0 || attr_num > 3) {
+                printf("Invalid Attribute Number.\n");
+                return -1;
+            }
+            argNum++;
+            break;
+        case 'o':
+            ofile = optarg;
+            output_fp = fopen("b.out", "w");
+            if (output_fp==NULL) {
+                //printf("%s\n", optarg);
+                perror("Invalid output file name");
+                return -1;
+            }
+            break;
+
         default: /* '?' */
-            fprintf(stderr, "Usage: %s [-d Depth of binary tree]\n", // In case of wrong options
+            fprintf(stderr, usage_msg, // In case of wrong options
                     argv[0]);
             exit(EXIT_FAILURE);
         }
     }
+
+    if (argNum < 2) {
+        fprintf(stderr, usage_msg, // In case of wrong options
+                    argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
     int p[2];
     if (pipe(p) == -1) {
         perror("Root pipe error: ");
@@ -31,14 +76,30 @@ int main(int argc, char **argv)
     if (fork() != 0) {
         //printf("I'm the root!\n");
         close(p[1]); //Parent closes writing end
-        int b_read;
+        /*int b_read;
         do {
             b_read = read(p[0], buf, 1024);
             if (b_read > 0) {
                 write(1, buf, b_read);
             }
-        } while(b_read > 0);
-        close(p[0]);
+        } while(b_read > 0);*/
+        tax_rec records[11];
+        FILE* input_fp = fdopen(p[0], "r");
+        int nread = fread(records, sizeof(tax_rec), 11, input_fp);
+        printf("Records read: %d\n", nread);
+
+        tax_rec record;
+        for (int i=0; i<nread; i++){
+            record = records[i];
+            printf("id: %d, name: %s %s, income: %f\n", record.id, record.fname, record.lname, record.income);
+        }
+
+        int nwrite = fwrite(records, sizeof(tax_rec), nread, output_fp);
+        printf("Records written: %d\n", nwrite);
+
+        //close(p[0]);
+        fclose(input_fp);
+        fclose(output_fp);
         printf("Look at me! I'm the root!\n");
 
     } else {
@@ -46,8 +107,12 @@ int main(int argc, char **argv)
         if(dup2(p[1], 1) < 0) { //Redirect sdout to pipe
             perror("Dup2 error: ");
             return -1;
-        } 
-        if (execlp("./node", "./node", "-d", depth, NULL) == -1) perror("Exec failed: ");
+        }
+        char depth_arg[64], attr_num_arg[64];
+        sprintf(depth_arg, "%d", depth);
+        sprintf(attr_num_arg, "%d", attr_num);
+        //if (execlp("./node", "./node", "-d", depth, "-a", attr_num_arg, NULL) == -1) perror("Exec failed ");
+        if (execlp("./node", "./node", "-d", "2", "-a", "0", NULL) == -1) perror("Exec failed ");
     }
 
     return 0;
