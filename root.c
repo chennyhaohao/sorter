@@ -10,8 +10,6 @@
 #include <sys/types.h>
 #include "./record.c"
 
-#define FIFO "./root_pipe"
-
 
 int sig_usr1_count = 0;
 int sig_usr2_count = 0;
@@ -48,7 +46,7 @@ int main(int argc, char **argv)
     if(signal(SIGALRM, sig_handler) == SIG_ERR) perror("Cannot catch SIGALRM ");
     if(signal(SIGUSR1, sig_handler) == SIG_ERR) perror("Cannot catch SIGUSR1 ");    
     if(signal(SIGUSR2, sig_handler) == SIG_ERR) perror("Cannot catch SIGUSR2 ");
-    
+
     FILE * output_fp = fdopen(1, "w");
     if (output_fp==NULL) {
         perror("Output file creation error: ");
@@ -104,7 +102,9 @@ int main(int argc, char **argv)
         return -1;
     }
 */
-    if(mkfifo(FIFO, 0660) < 0) { //Create named pipe
+    char pipe_name[64];
+    snprintf(pipe_name, 64, "./pipe_%d", getpid());
+    if(mkfifo(pipe_name, 0660) < 0) { //Create named pipe
         perror("Fifo creation error ");
         return -1;
     }
@@ -125,7 +125,7 @@ int main(int argc, char **argv)
         t1 = (double) times(&tb1);
 
         tax_rec records[10000];
-        FILE* input_fp = fopen(FIFO, "r"); //Open read end of named pipe
+        FILE* input_fp = fopen(pipe_name, "r"); //Open read end of named pipe
         int nread = fread(records, sizeof(tax_rec), 10000, input_fp);
         printf("Records read: %d\n", nread);
 /*
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
         fclose(input_fp);
         fclose(output_fp);
         printf("Look at me! I'm the root!\n");
-        if(unlink(FIFO) < 0) {
+        if(unlink(pipe_name) < 0) {
             perror("Named pipe unlink error ");
         }
 
@@ -165,7 +165,7 @@ int main(int argc, char **argv)
         char depth_arg[64], attr_num_arg[64];
         sprintf(depth_arg, "%d", depth);
         sprintf(attr_num_arg, "%d", attr_num);
-        if (execlp("./node", "./node", "-d", depth_arg, "-a", attr_num_arg, NULL) == -1) perror("Exec failed ");
+        if (execlp("./node", "./node", "-d", depth_arg, "-a", attr_num_arg, "-o", pipe_name, NULL) == -1) perror("Exec failed ");
         //if (execlp("./node", "./node", "-d", "3", "-a", "0", NULL) == -1) perror("Exec failed ");
     }
 

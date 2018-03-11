@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/times.h>
+#include <sys/stat.h>
 #include <signal.h>
 #include <string.h>
 #include "./record.c"
@@ -11,7 +12,6 @@
 #include "./merge.h"
 
 #define BUF_SIZE 4096
-#define FIFO "./root_pipe"
 
 int main(int argc, char **argv) 
 {	
@@ -20,7 +20,8 @@ int main(int argc, char **argv)
 	int r_start = 0, r_end = 99;
 	int opt;
 	char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number]\n";
-    while ((opt = getopt(argc, argv, "d:a:")) != -1) { // Use getopt to parse commandline arguments
+    char parent_pipe_name[64];
+    while ((opt = getopt(argc, argv, "d:a:o:")) != -1) { // Use getopt to parse commandline arguments
         switch (opt) {
         case 'd':
             depth = atoi(optarg);
@@ -39,6 +40,10 @@ int main(int argc, char **argv)
             }
         	argNum++;
         	break;
+        case 'o':
+            snprintf(parent_pipe_name, 64, "%s", optarg);
+            printf("root pipe name successful\n");
+            break;
 
         default: /* '?' */
             fprintf(stderr, usage_msg, // In case of wrong options
@@ -61,17 +66,33 @@ int main(int argc, char **argv)
     int c1_rpipe;
     int c2_rpipe;
     int parent_wpipe = 1;
+    char c1_name[64], c2_name[64];
     for (; depth > 0; depth--) { //An iterative approach to creating the hierarchy
-    	if (pipe(p) == -1) {
-    		perror("Pipe error: ");
-    		return -1;
-    	} 
+        if (pipe(p) == -1) {
+            perror("Pipe error ");
+            return -1;
+        } 
+        if (depth == 1) {//Immediately above leaves
+            close(p[0]); //Use named pipe instead
+            
+            snprintf(c1_name, 64, "./pipe_%d_1", getpid());
+            snprintf(c2_name, 64, "./pipe_%d_2", getpid());            
+            if (mkfifo(c1_name, 0660) < 0) {
+                perror("Named pipe creation error ");
+                return -1;
+            }
+            if (mkfifo(c2_name, 0660) < 0) {
+                perror("Named pipe creation error ");
+                return -1;
+            }
+        }
+
     	if (fork() != 0) { //If is parent, fork again
     		close(p[1]); //Parent closes writing end
     		c1_rpipe = p[0]; 
 
     		if (pipe(p) == -1) {
-	    		perror("Pipe error: ");
+	    		perror("Pipe error ");
 	    		return -1;
 	    	} 
     		if (fork() != 0) { //If is parent, break loop after 2 forks
@@ -79,11 +100,17 @@ int main(int argc, char **argv)
     			c2_rpipe = p[0];
     			break;
     		} else { //Child 2 closes reading end
+                if (depth == 1) {
+                    strncpy(parent_pipe_name, c2_name, 64);
+                }
     			close(p[0]);
     			r_start = (r_start + r_end)/2 + 1; //Take second half of range
     			parent_wpipe = p[1];
     		}
     	} else {
+            if (depth == 1) {
+                strncpy(parent_pipe_name, c1_name, 64);
+            }
     		close(p[0]); //Child 1 closes reading end
     		r_end = (r_start + r_end)/2; //Take first half of range
     		parent_wpipe = p[1];
@@ -98,8 +125,8 @@ int main(int argc, char **argv)
     t1 = (double) times(&tb1);
 
     FILE* parent_fp;
-    if (parent_wpipe == 1) {
-        parent_fp = fopen(FIFO, "w"); //Top node opens named pipe
+    if (parent_wpipe == 1 || depth == 0) {
+        parent_fp = fopen(parent_pipe_name, "w"); //Top node opens named pipe
     } else {
         parent_fp = fdopen(parent_wpipe, "w");
     }
@@ -174,8 +201,15 @@ int main(int argc, char **argv)
         printf("c1 read: %d\n", c1_nread);
         printf("c2 read: %d\n", c2_nread);
     	*/
-    	FILE* c1_fp = fdopen(c1_rpipe, "r");
-    	FILE* c2_fp = fdopen(c2_rpipe, "r");
+        FILE *c1_fp, *c2_fp;
+        if (depth == 1) {
+            c1_fp = fopen(c1_name, "r");
+            c2_fp = fopen(c2_name, "r");
+        } else {
+            c1_fp = fdopen(c1_rpipe, "r");
+            c2_fp = fdopen(c2_rpipe, "r");
+        }
+    	
     	if (c1_fp==NULL || c2_fp==NULL) {
     		perror("Pipe stream error ");
     		close(c1_rpipe);
@@ -241,7 +275,14 @@ int main(int argc, char **argv)
     	//write(parent_wpipe, c2_buf, c2_read);
     	//close(parent_wpipe);
         fclose(parent_fp);
-       
+        if (depth == 1) { //Nodes immediately above leaves clean up named pipes
+            if(unlink(c1_name) < 0) {
+                perror("Named pipe unlink error ");
+            }
+            if(unlink(c2_name) < 0) {
+                perror("Named pipe unlink error ");
+            }
+        }
     }
 
 
