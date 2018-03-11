@@ -8,7 +8,6 @@
 #include <signal.h>
 #include <string.h>
 #include "./record.c"
-#include "./sort.h"
 #include "./merge.h"
 
 #define BUF_SIZE 4096
@@ -22,7 +21,7 @@ int main(int argc, char **argv)
 	char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number]\n";
     char parent_pipe_name[64];
     while ((opt = getopt(argc, argv, "d:a:o:")) != -1) { // Use getopt to parse commandline arguments
-        switch (opt) {
+        switch (opt) { 
         case 'd':
             depth = atoi(optarg);
             if (depth < 0 || depth > 6) {
@@ -42,7 +41,6 @@ int main(int argc, char **argv)
         	break;
         case 'o':
             snprintf(parent_pipe_name, 64, "%s", optarg);
-            printf("root pipe name successful\n");
             break;
 
         default: /* '?' */
@@ -131,7 +129,19 @@ int main(int argc, char **argv)
         parent_fp = fdopen(parent_wpipe, "w");
     }
 
-    if (depth == 0) { //Sorter code
+    if (depth == 0) { 
+        char r_start_arg[16], r_end_arg[16], attr_num_arg[16], root_pid_arg[16];
+        snprintf(r_start_arg, 16, "%d", r_start);
+        snprintf(r_end_arg, 16, "%d", r_end);
+        snprintf(attr_num_arg, 16, "%d", attr_num);
+        snprintf(root_pid_arg, 16, "%d", root_pid);
+
+        if (execlp("./sorter", "./sorter", "-f", "test_data/test_data_100000.bin", "-s", r_start_arg, "-e", r_end_arg,
+         "-a", attr_num_arg, "-r", root_pid_arg, "-o", parent_pipe_name , "-m", "1", NULL) < 0 ) {
+            perror("Sorter exec fail ");
+            return -1;
+        }
+    /*//Sorter code
     	FILE *fp = fopen("test_data/test_data_100000.bin", "rb");
 		tax_rec * records;
 		tax_rec record;
@@ -179,7 +189,7 @@ int main(int argc, char **argv)
     	//close(parent_wpipe);
         fclose(parent_fp);
         kill(root_pid, SIGUSR2);
-        printf("Sent sig to %d\n", root_pid);
+        printf("Sent sig to %d\n", root_pid);*/
     } else {
     	int nrecords = r_end - r_start + 1;
     	//char msg[BUF_SIZE];
@@ -209,6 +219,7 @@ int main(int argc, char **argv)
             c1_fp = fdopen(c1_rpipe, "r");
             c2_fp = fdopen(c2_rpipe, "r");
         }
+
     	
     	if (c1_fp==NULL || c2_fp==NULL) {
     		perror("Pipe stream error ");

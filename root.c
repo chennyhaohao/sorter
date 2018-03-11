@@ -154,6 +154,8 @@ int main(int argc, char **argv)
         (t2 - t1) / ticspersec, cpu_time / ticspersec);
 
         printf("SIGUSR2 count: %d\n", sig_usr2_count);
+        printf("SIGUSR1 count: %d\n", sig_usr1_count);
+
     } else {
         /*
         close(p[0]); //Child closes reading end
