@@ -95,9 +95,9 @@ int main(int argc, char **argv)
         ticspersec = (double) sysconf(_SC_CLK_TCK);
         t1 = (double) times(&tb1);
 
-        tax_rec records[9999];
+        tax_rec records[10000];
         FILE* input_fp = fopen(FIFO, "r"); //Open read end of named pipe
-        int nread = fread(records, sizeof(tax_rec), 9999, input_fp);
+        int nread = fread(records, sizeof(tax_rec), 10000, input_fp);
         printf("Records read: %d\n", nread);
 /*
         tax_rec record;
@@ -134,8 +134,8 @@ int main(int argc, char **argv)
         char depth_arg[64], attr_num_arg[64];
         sprintf(depth_arg, "%d", depth);
         sprintf(attr_num_arg, "%d", attr_num);
-        //if (execlp("./node", "./node", "-d", depth, "-a", attr_num_arg, NULL) == -1) perror("Exec failed ");
-        if (execlp("./node", "./node", "-d", "3", "-a", "0", NULL) == -1) perror("Exec failed ");
+        if (execlp("./node", "./node", "-d", depth_arg, "-a", attr_num_arg, NULL) == -1) perror("Exec failed ");
+        //if (execlp("./node", "./node", "-d", "3", "-a", "0", NULL) == -1) perror("Exec failed ");
     }
 
     return 0;
