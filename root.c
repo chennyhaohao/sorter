@@ -5,7 +5,11 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "./record.c"
+
+#define FIFO "./root_pipe"
 
 int main(int argc, char **argv) 
 {
@@ -66,26 +70,26 @@ int main(int argc, char **argv)
                     argv[0]);
         exit(EXIT_FAILURE);
     }
-
+/*
     int p[2];
     if (pipe(p) == -1) {
         perror("Root pipe error: ");
         return -1;
     }
+*/
+    if(mkfifo(FIFO, 0660) < 0) { //Create named pipe
+        perror("Fifo creation error ");
+        return -1;
+    }
+
 
     if (fork() != 0) {
         //printf("I'm the root!\n");
-        close(p[1]); //Parent closes writing end
-        /*int b_read;
-        do {
-            b_read = read(p[0], buf, 1024);
-            if (b_read > 0) {
-                write(1, buf, b_read);
-            }
-        } while(b_read > 0);*/
-        tax_rec records[11];
-        FILE* input_fp = fdopen(p[0], "r");
-        int nread = fread(records, sizeof(tax_rec), 11, input_fp);
+        //close(p[1]); //Parent closes writing end
+        
+        tax_rec records[999];
+        FILE* input_fp = fopen(FIFO, "r"); //Open read end of named pipe
+        int nread = fread(records, sizeof(tax_rec), 999, input_fp);
         printf("Records read: %d\n", nread);
 
         tax_rec record;
@@ -101,18 +105,22 @@ int main(int argc, char **argv)
         fclose(input_fp);
         fclose(output_fp);
         printf("Look at me! I'm the root!\n");
-
+        if(unlink(FIFO) < 0) {
+            perror("Named pipe unlink error ");
+        }
     } else {
+        /*
         close(p[0]); //Child closes reading end
         if(dup2(p[1], 1) < 0) { //Redirect sdout to pipe
             perror("Dup2 error: ");
             return -1;
-        }
+        }*/
+
         char depth_arg[64], attr_num_arg[64];
         sprintf(depth_arg, "%d", depth);
         sprintf(attr_num_arg, "%d", attr_num);
         //if (execlp("./node", "./node", "-d", depth, "-a", attr_num_arg, NULL) == -1) perror("Exec failed ");
-        if (execlp("./node", "./node", "-d", "2", "-a", "0", NULL) == -1) perror("Exec failed ");
+        if (execlp("./node", "./node", "-d", "3", "-a", "0", NULL) == -1) perror("Exec failed ");
     }
 
     return 0;

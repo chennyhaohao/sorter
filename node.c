@@ -10,12 +10,13 @@
 #include "./merge.h"
 
 #define BUF_SIZE 4096
+#define FIFO "./root_pipe"
 
 int main(int argc, char **argv) 
 {	
 	int attr_num, depth;
 	int argNum = 0;
-	int r_start = 0, r_end = 10;
+	int r_start = 0, r_end = 999;
 	int opt;
 	char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number]\n";
     while ((opt = getopt(argc, argv, "d:a:")) != -1) { // Use getopt to parse commandline arguments
@@ -86,6 +87,13 @@ int main(int argc, char **argv)
     	}
     }
 
+    FILE* parent_fp;
+    if (parent_wpipe == 1) {
+        parent_fp = fopen(FIFO, "w"); //Top node opens named pipe
+    } else {
+        parent_fp = fdopen(parent_wpipe, "w");
+    }
+
 
     if (depth == 0) { //Sorter code
     	FILE *fp = fopen("test_data/test_data_100000.bin", "rb");
@@ -106,7 +114,7 @@ int main(int argc, char **argv)
 
 		quicksort(records, nread, attr_num);
 
-        FILE *parent_fp = fdopen(parent_wpipe, "w");
+        //FILE *parent_fp = fdopen(parent_wpipe, "w");
 /*
 	   	for (int i=0; i<nread; i++){
 			record = records[i];
@@ -189,9 +197,8 @@ int main(int argc, char **argv)
 
         merge(c1_buf, c2_buf, result_buf, c1_i, c2_i, attr_num);
 
-        FILE* parent_fp = fdopen(parent_wpipe, "w");
         if (parent_fp == NULL) {
-            perror("Pipe stream error: ");
+            perror("Pipe stream error ");
             return -1;
         }
 /*
