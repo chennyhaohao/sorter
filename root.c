@@ -12,6 +12,28 @@
 
 #define FIFO "./root_pipe"
 
+
+int sig_usr1_count = 0;
+int sig_usr2_count = 0;
+int sig_alrm_count = 0;
+
+void sig_handler(int signum) {
+    signal(SIGALRM, sig_handler);
+    signal(SIGUSR1, sig_handler);
+    signal(SIGUSR2, sig_handler);
+
+    if (signum == SIGUSR2) {
+        sig_usr2_count++;
+        printf("QS sorter signal received.\n");
+    } else if (signum == SIGUSR1) {
+        sig_usr1_count++;
+        printf("SH sorter signal received.\n");
+    } else if (signum == SIGALRM) {
+        sig_alrm_count++;
+        printf("BS sorter signal received.\n");
+    }
+}
+
 int main(int argc, char **argv) 
 {
 	int opt;
@@ -22,6 +44,10 @@ int main(int argc, char **argv)
     int r_start = 0, r_end = 10;
     char *ofile;
     //char *fifo = "./myfifo";
+    //Set signal handlers
+    if(signal(SIGALRM, sig_handler) == SIG_ERR) perror("Cannot catch SIGALRM ");
+    if(signal(SIGUSR1, sig_handler) == SIG_ERR) perror("Cannot catch SIGUSR1 ");    
+    if(signal(SIGUSR2, sig_handler) == SIG_ERR) perror("Cannot catch SIGUSR2 ");
     
     FILE * output_fp = fdopen(1, "w");
     if (output_fp==NULL) {
@@ -83,6 +109,9 @@ int main(int argc, char **argv)
         return -1;
     }
 
+    
+
+    printf("root pid: %d\n", getpid());
 
     if (fork() != 0) {
         //printf("I'm the root!\n");
@@ -123,6 +152,8 @@ int main(int argc, char **argv)
         (tb1.tms_utime + tb1.tms_stime));
         printf("Root complete. Run time (turnaround time) was %lf sec (REAL time) although we used the CPU for %lf sec (CPU time).\n",
         (t2 - t1) / ticspersec, cpu_time / ticspersec);
+
+        printf("SIGUSR2 count: %d\n", sig_usr2_count);
     } else {
         /*
         close(p[0]); //Child closes reading end

@@ -7,7 +7,7 @@
 #include <signal.h>
 #include <string.h>
 #include "./record.c"
-#include "./quicksort.h"
+#include "./sort.h"
 #include "./merge.h"
 
 #define BUF_SIZE 4096
@@ -17,7 +17,7 @@ int main(int argc, char **argv)
 {	
 	int attr_num, depth;
 	int argNum = 0;
-	int r_start = 0, r_end = 9999;
+	int r_start = 0, r_end = 99;
 	int opt;
 	char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number]\n";
     while ((opt = getopt(argc, argv, "d:a:")) != -1) { // Use getopt to parse commandline arguments
@@ -53,7 +53,9 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    int root_pid = getppid();
+    pid_t root_pid = getppid();
+
+    printf("parent pid: %d\n", root_pid);
 
     int p[2];
     int c1_rpipe;
@@ -119,15 +121,17 @@ int main(int argc, char **argv)
 		int nread = fread(records, sizeof(tax_rec), nrecords, fp);
         fclose(fp);
 
-		quicksort(records, nread, attr_num);
+		//quicksort(records, nread, attr_num);
+        shellsort(records, nread, attr_num);
 
         //FILE *parent_fp = fdopen(parent_wpipe, "w");
-/*
+
 	   	for (int i=0; i<nread; i++){
 			record = records[i];
 			printf("id: %d, name: %s %s, income: %f\n", record.id, record.fname, record.lname, record.income);
 		}
-*/
+        printf("\n");
+
         int nwrite = fwrite(records, sizeof(tax_rec), nread, parent_fp);
         //printf("nwrite: %d\n", nwrite);
 
@@ -147,6 +151,8 @@ int main(int argc, char **argv)
     	//write(1, msg, strlen(msg));
     	//close(parent_wpipe);
         fclose(parent_fp);
+        kill(root_pid, SIGUSR2);
+        printf("Sent sig to %d\n", root_pid);
     } else {
     	int nrecords = r_end - r_start + 1;
     	//char msg[BUF_SIZE];
