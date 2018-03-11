@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/times.h>
 #include <signal.h>
 #include <string.h>
 #include "./record.c"
@@ -16,7 +17,7 @@ int main(int argc, char **argv)
 {	
 	int attr_num, depth;
 	int argNum = 0;
-	int r_start = 0, r_end = 999;
+	int r_start = 0, r_end = 9999;
 	int opt;
 	char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number]\n";
     while ((opt = getopt(argc, argv, "d:a:")) != -1) { // Use getopt to parse commandline arguments
@@ -58,7 +59,7 @@ int main(int argc, char **argv)
     int c1_rpipe;
     int c2_rpipe;
     int parent_wpipe = 1;
-    for (; depth > 0; depth--) {
+    for (; depth > 0; depth--) { //An iterative approach to creating the hierarchy
     	if (pipe(p) == -1) {
     		perror("Pipe error: ");
     		return -1;
@@ -87,13 +88,19 @@ int main(int argc, char **argv)
     	}
     }
 
+    //Start timer
+    double t1, t2, cpu_time;
+    struct tms tb1, tb2;
+    double ticspersec;
+    ticspersec = (double) sysconf(_SC_CLK_TCK);
+    t1 = (double) times(&tb1);
+
     FILE* parent_fp;
     if (parent_wpipe == 1) {
         parent_fp = fopen(FIFO, "w"); //Top node opens named pipe
     } else {
         parent_fp = fdopen(parent_wpipe, "w");
     }
-
 
     if (depth == 0) { //Sorter code
     	FILE *fp = fopen("test_data/test_data_100000.bin", "rb");
@@ -123,6 +130,13 @@ int main(int argc, char **argv)
 */
         int nwrite = fwrite(records, sizeof(tax_rec), nread, parent_fp);
         //printf("nwrite: %d\n", nwrite);
+
+        //Report time
+        t2 = (double) times(&tb2);
+        cpu_time = (double) ((tb2.tms_utime + tb2.tms_stime) -
+        (tb1.tms_utime + tb1.tms_stime));
+        printf("Quick sort complete. Run time was %lf sec (REAL time) although we used the CPU for %lf sec (CPU time).\n",
+        (t2 - t1) / ticspersec, cpu_time / ticspersec);
 
 		free(records);
 
@@ -209,11 +223,19 @@ int main(int argc, char **argv)
 */
     	fwrite(result_buf, sizeof(tax_rec), (c1_i+c2_i), parent_fp);
 
+        //Report time
+        t2 = (double) times(&tb2);
+        cpu_time = (double) ((tb2.tms_utime + tb2.tms_stime) -
+        (tb1.tms_utime + tb1.tms_stime));
+        printf("Merging complete. Run time was %lf sec (REAL time) although we used the CPU for %lf sec (CPU time).\n",
+        (t2 - t1) / ticspersec, cpu_time / ticspersec);
+
         free(c1_buf);
         free(result_buf);
     	//write(parent_wpipe, c2_buf, c2_read);
     	//close(parent_wpipe);
         fclose(parent_fp);
+       
     }
 
 

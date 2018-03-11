@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/times.h>
 #include <signal.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -86,18 +87,25 @@ int main(int argc, char **argv)
     if (fork() != 0) {
         //printf("I'm the root!\n");
         //close(p[1]); //Parent closes writing end
-        
-        tax_rec records[999];
-        FILE* input_fp = fopen(FIFO, "r"); //Open read end of named pipe
-        int nread = fread(records, sizeof(tax_rec), 999, input_fp);
-        printf("Records read: %d\n", nread);
 
+        //Start timer
+        double t1, t2, cpu_time;
+        struct tms tb1, tb2;
+        double ticspersec;
+        ticspersec = (double) sysconf(_SC_CLK_TCK);
+        t1 = (double) times(&tb1);
+
+        tax_rec records[9999];
+        FILE* input_fp = fopen(FIFO, "r"); //Open read end of named pipe
+        int nread = fread(records, sizeof(tax_rec), 9999, input_fp);
+        printf("Records read: %d\n", nread);
+/*
         tax_rec record;
         for (int i=0; i<nread; i++){
             record = records[i];
             printf("id: %d, name: %s %s, income: %f\n", record.id, record.fname, record.lname, record.income);
         }
-
+*/
         int nwrite = fwrite(records, sizeof(tax_rec), nread, output_fp);
         printf("Records written: %d\n", nwrite);
 
@@ -108,6 +116,13 @@ int main(int argc, char **argv)
         if(unlink(FIFO) < 0) {
             perror("Named pipe unlink error ");
         }
+
+        //Report time
+        t2 = (double) times(&tb2);
+        cpu_time = (double) ((tb2.tms_utime + tb2.tms_stime) -
+        (tb1.tms_utime + tb1.tms_stime));
+        printf("Root complete. Run time (turnaround time) was %lf sec (REAL time) although we used the CPU for %lf sec (CPU time).\n",
+        (t2 - t1) / ticspersec, cpu_time / ticspersec);
     } else {
         /*
         close(p[0]); //Child closes reading end
