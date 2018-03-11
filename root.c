@@ -40,7 +40,7 @@ int main(int argc, char **argv)
     int attr_num, depth;
     int argNum = 0;
     int r_start = 0, r_end = 10;
-    char *ofile;
+    char ofile[64], ifile[256];
     //char *fifo = "./myfifo";
     //Set signal handlers
     if(signal(SIGALRM, sig_handler) == SIG_ERR) perror("Cannot catch SIGALRM ");
@@ -53,8 +53,8 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number]\n";
-    while ((opt = getopt(argc, argv, "d:a:o::")) != -1) { // Use getopt to parse commandline arguments
+    char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number] [-f File to sort]\n";
+    while ((opt = getopt(argc, argv, "d:a:o:f:")) != -1) { // Use getopt to parse commandline arguments
         switch (opt) {
         case 'd':
             depth = atoi(optarg);
@@ -74,13 +74,24 @@ int main(int argc, char **argv)
             argNum++;
             break;
         case 'o':
-            ofile = optarg;
-            output_fp = fopen("b.out", "w");
+            if (sscanf(optarg, "%s", ofile) < 1) {
+                printf("Invalid output file name\n");
+                return -1;
+            }
+            output_fp = fopen(ofile, "w");
             if (output_fp==NULL) {
                 //printf("%s\n", optarg);
                 perror("Invalid output file name");
                 return -1;
             }
+            break;
+
+        case 'f':
+            if (sscanf(optarg, "%s", ifile) < 1) {
+                printf("Invalid input file name\n");
+                return -1;
+            }
+            argNum++;
             break;
 
         default: /* '?' */
@@ -90,7 +101,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if (argNum < 2) {
+    if (argNum < 3) {
         fprintf(stderr, usage_msg, // In case of wrong options
                     argv[0]);
         exit(EXIT_FAILURE);
@@ -167,7 +178,8 @@ int main(int argc, char **argv)
         char depth_arg[64], attr_num_arg[64];
         sprintf(depth_arg, "%d", depth);
         sprintf(attr_num_arg, "%d", attr_num);
-        if (execlp("./node", "./node", "-d", depth_arg, "-a", attr_num_arg, "-o", pipe_name, NULL) == -1) perror("Exec failed ");
+        if (execlp("./node", "./node", "-d", depth_arg, "-a", attr_num_arg, "-o", pipe_name,
+        "-f", ifile, NULL) == -1) perror("Exec failed ");
         //if (execlp("./node", "./node", "-d", "3", "-a", "0", NULL) == -1) perror("Exec failed ");
     }
 
