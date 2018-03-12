@@ -146,8 +146,8 @@ int main(int argc, char **argv)
         snprintf(attr_num_arg, 16, "%d", attr_num);
         snprintf(root_pid_arg, 16, "%d", root_pid);
 
-        if (execlp("./sorter", "./sorter", "-f", ifile, "-s", r_start_arg, "-e", r_end_arg,
-         "-a", attr_num_arg, "-r", root_pid_arg, "-o", parent_pipe_name , "-m", "0", NULL) < 0 ) {
+        if (execlp("./shellsort", "./shellsort", "-f", ifile, "-s", r_start_arg, "-e", r_end_arg,
+         "-a", attr_num_arg, "-r", root_pid_arg, "-o", parent_pipe_name, NULL) < 0 ) {
             perror("Sorter exec fail ");
             return -1;
         }
