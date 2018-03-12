@@ -97,19 +97,21 @@ int main(int argc, char **argv) {
 
     if (mode == 0) {
 		quicksort(records, nread, attr_num);
-	} else {
+	} else if (mode == 1) {
 		shellsort(records, nread, attr_num);
+	} else {
+		bubblesort(records, nread, attr_num);
 	}
     //shellsort(records, nread, attr_num);
 
     //FILE *parent_fp = fdopen(parent_wpipe, "w");
-
+/*
    	for (int i=0; i<nread; i++){
 		record = records[i];
 		printf("id: %d, name: %s %s, income: %f\n", record.id, record.fname, record.lname, record.income);
 	}
     printf("\n");
-
+*/
     int nwrite = fwrite(records, sizeof(tax_rec), nread, parent_fp);
     printf("nwrite: %d\n", nwrite);
 

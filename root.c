@@ -36,10 +36,9 @@ int main(int argc, char **argv)
 {
 	int opt;
     //char depth[56], attr_num[56];
-    char buf[1024];
     int attr_num, depth;
     int argNum = 0;
-    int r_start = 0, r_end = 10;
+    int record_count = 0;
     char ofile[64], ifile[256];
     //char *fifo = "./myfifo";
     //Set signal handlers
@@ -47,7 +46,7 @@ int main(int argc, char **argv)
     if(signal(SIGUSR1, sig_handler) == SIG_ERR) perror("Cannot catch SIGUSR1 ");    
     if(signal(SIGUSR2, sig_handler) == SIG_ERR) perror("Cannot catch SIGUSR2 ");
 
-    FILE * output_fp = fdopen(1, "w");
+    FILE * output_fp = fdopen(1, "w"), *target_fp;
     if (output_fp==NULL) {
         perror("Output file creation error: ");
         return -1;
@@ -55,6 +54,7 @@ int main(int argc, char **argv)
 
     char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number] [-f File to sort]\n";
     while ((opt = getopt(argc, argv, "d:a:o:f:")) != -1) { // Use getopt to parse commandline arguments
+        //TODO: take in number of records as argument
         switch (opt) {
         case 'd':
             depth = atoi(optarg);
@@ -91,6 +91,11 @@ int main(int argc, char **argv)
                 printf("Invalid input file name\n");
                 return -1;
             }
+            target_fp = fopen(ifile, "r");
+            if (!target_fp) {
+                perror("Invalid input file name");
+                return -1;
+            }
             argNum++;
             break;
 
@@ -113,6 +118,16 @@ int main(int argc, char **argv)
         return -1;
     }
 */
+    tax_rec buf[100];
+    int nread;
+    do {
+        nread = fread(buf, sizeof(tax_rec), 100, target_fp);
+        record_count += nread;
+    } while (nread > 0);
+    printf("Record count: %d\n", record_count);
+    fclose(target_fp);
+
+
     char pipe_name[64];
     snprintf(pipe_name, 64, "./pipe_%d", getpid());
     if(mkfifo(pipe_name, 0660) < 0) { //Create named pipe
@@ -135,9 +150,13 @@ int main(int argc, char **argv)
         ticspersec = (double) sysconf(_SC_CLK_TCK);
         t1 = (double) times(&tb1);
 
-        tax_rec records[10000];
+        tax_rec* records = malloc(record_count * sizeof(tax_rec));
+        if (!records) {
+            perror("Malloc failed");
+            return -1;
+        }
         FILE* input_fp = fopen(pipe_name, "r"); //Open read end of named pipe
-        int nread = fread(records, sizeof(tax_rec), 10000, input_fp);
+        nread = fread(records, sizeof(tax_rec), record_count, input_fp);
         printf("Records read: %d\n", nread);
 /*
         tax_rec record;
@@ -175,11 +194,12 @@ int main(int argc, char **argv)
             return -1;
         }*/
 
-        char depth_arg[64], attr_num_arg[64];
-        sprintf(depth_arg, "%d", depth);
-        sprintf(attr_num_arg, "%d", attr_num);
+        char depth_arg[64], attr_num_arg[64], record_count_arg[64];
+        snprintf(depth_arg, 64, "%d", depth);
+        snprintf(attr_num_arg, 64, "%d", attr_num);
+        snprintf(record_count_arg, 64, "%d", record_count);
         if (execlp("./node", "./node", "-d", depth_arg, "-a", attr_num_arg, "-o", pipe_name,
-        "-f", ifile, NULL) == -1) perror("Exec failed ");
+        "-f", ifile, "-n", record_count_arg, NULL) == -1) perror("Exec failed ");
         //if (execlp("./node", "./node", "-d", "3", "-a", "0", NULL) == -1) perror("Exec failed ");
     }
 

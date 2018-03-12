@@ -16,11 +16,11 @@ int main(int argc, char **argv)
 {	
 	int attr_num, depth;
 	int argNum = 0;
-	int r_start = 0, r_end = 99;
+	int r_start = 0, r_end;
 	int opt;
-	char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number] [-f file to sort]\n";
+	char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number] [-f file to sort] [-n number of records]\n";
     char parent_pipe_name[64], ifile[256];
-    while ((opt = getopt(argc, argv, "d:a:o:f:")) != -1) { // Use getopt to parse commandline arguments
+    while ((opt = getopt(argc, argv, "d:a:o:f:n:")) != -1) { // Use getopt to parse commandline arguments
         switch (opt) { 
         case 'd':
             depth = atoi(optarg);
@@ -48,6 +48,11 @@ int main(int argc, char **argv)
             argNum++;
             break;
 
+        case 'n':
+            r_end = atoi(optarg) - 1;
+            argNum++;
+            break;
+
         default: /* '?' */
             fprintf(stderr, usage_msg, // In case of wrong options
                     argv[0]);
@@ -55,7 +60,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if (argNum < 3) {
+    if (argNum < 4) {
     	fprintf(stderr, usage_msg, // In case of wrong options
                     argv[0]);
         exit(EXIT_FAILURE);
@@ -142,7 +147,7 @@ int main(int argc, char **argv)
         snprintf(root_pid_arg, 16, "%d", root_pid);
 
         if (execlp("./sorter", "./sorter", "-f", ifile, "-s", r_start_arg, "-e", r_end_arg,
-         "-a", attr_num_arg, "-r", root_pid_arg, "-o", parent_pipe_name , "-m", "1", NULL) < 0 ) {
+         "-a", attr_num_arg, "-r", root_pid_arg, "-o", parent_pipe_name , "-m", "0", NULL) < 0 ) {
             perror("Sorter exec fail ");
             return -1;
         }
