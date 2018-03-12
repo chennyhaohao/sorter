@@ -168,10 +168,13 @@ int main(int argc, char **argv)
         int nwrite = fwrite(records, sizeof(tax_rec), nread, output_fp);
         printf("Records written: %d\n", nwrite);
 
-        //close(p[0]);
+        //Clean up: free resources
+        free(records);
         fclose(input_fp);
         fclose(output_fp);
+
         printf("Look at me! I'm the root!\n");
+
         if(unlink(pipe_name) < 0) {
             perror("Named pipe unlink error ");
         }

@@ -139,6 +139,6 @@ int main(int argc, char **argv) {
     		signum = SIGUSR1;
     	}
     	kill(root_pid, signum);
-    	printf("Sent sig to %d\n", root_pid);
+    	printf("Sent sig to root (%d)\n", root_pid);
 	}
 }
