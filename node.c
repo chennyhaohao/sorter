@@ -91,10 +91,7 @@ int main(int argc, char **argv)
     int parent_wpipe = 1;
     char c1_name[64], c2_name[64];
     for (; depth > 0; depth--) { //An iterative approach to creating the hierarchy
-        if (pipe(p) == -1) {
-            perror("Pipe error ");
-            return -1;
-        } 
+        
         if (depth == 1) {//Immediately above leaves
             close(p[0]); //Use named pipe instead
             
@@ -108,6 +105,11 @@ int main(int argc, char **argv)
                 perror("Named pipe creation error ");
                 return -1;
             }
+        } else { //Use unnamed pipe
+            if (pipe(p) == -1) {
+                perror("Pipe error ");
+                return -1;
+            } 
         }
 
         if (rand_range) {
@@ -117,7 +119,7 @@ int main(int argc, char **argv)
         }
 
     	if (fork() != 0) { //If is parent, fork again
-    		close(p[1]); //Parent closes writing end
+    		if (depth != 1) close(p[1]); //Parent closes writing end
     		c1_rpipe = p[0]; 
 
     		if (pipe(p) == -1) {
@@ -125,27 +127,29 @@ int main(int argc, char **argv)
 	    		return -1;
 	    	} 
     		if (fork() != 0) { //If is parent, break loop after 2 forks
-    			close(p[1]);
+    			if (depth!=1) close(p[1]);
     			c2_rpipe = p[0];
     			break;
     		} else { //Child 2 closes reading end
                 if (depth == 1) {
                     strncpy(parent_pipe_name, c2_name, 64);
+                } else {
+                    close(p[0]);
+                    parent_wpipe = p[1];
                 }
-    			close(p[0]);
     			r_start = r_mid + 1; //Take second half of range
                 id_range /= 2;
                 id_start += id_range;
-    			parent_wpipe = p[1];
     		}
     	} else {
             if (depth == 1) {
                 strncpy(parent_pipe_name, c1_name, 64);
+            } else {
+                close(p[0]); //Child 1 closes reading end
+                parent_wpipe = p[1];
             }
-    		close(p[0]); //Child 1 closes reading end
     		r_end = r_mid; //Take first half of range
             id_range /= 2;
-    		parent_wpipe = p[1];
     	}
     }
 
