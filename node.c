@@ -8,6 +8,7 @@
 #include <signal.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 #include "./record.c"
 #include "./merge.h"
 
@@ -24,6 +25,7 @@ int main(int argc, char **argv)
 	int argNum = 0;
 	int r_start = 0, r_end, r_mid;
 	int opt;
+    int id_start = 0, id_range;
 	char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number] [-f file to sort] [-n number of records] [-r]\n";
     char parent_pipe_name[64], ifile[256];
     while ((opt = getopt(argc, argv, "d:a:o:f:n:r")) != -1) { // Use getopt to parse commandline arguments
@@ -35,6 +37,7 @@ int main(int argc, char **argv)
                 return -1;
             }
             argNum++;
+            id_range = (int)(pow(2, depth) + 0.5);
             break;
 
         case 'a':
@@ -131,6 +134,8 @@ int main(int argc, char **argv)
                 }
     			close(p[0]);
     			r_start = r_mid + 1; //Take second half of range
+                id_range /= 2;
+                id_start += id_range;
     			parent_wpipe = p[1];
     		}
     	} else {
@@ -139,6 +144,7 @@ int main(int argc, char **argv)
             }
     		close(p[0]); //Child 1 closes reading end
     		r_end = r_mid; //Take first half of range
+            id_range /= 2;
     		parent_wpipe = p[1];
     	}
     }
@@ -158,13 +164,22 @@ int main(int argc, char **argv)
     }
 
     if (depth == 0) { 
-        char r_start_arg[16], r_end_arg[16], attr_num_arg[16], root_pid_arg[16];
+        char r_start_arg[16], r_end_arg[16], attr_num_arg[16], root_pid_arg[16], exec_name[64];
         snprintf(r_start_arg, 16, "%d", r_start);
         snprintf(r_end_arg, 16, "%d", r_end);
         snprintf(attr_num_arg, 16, "%d", attr_num);
         snprintf(root_pid_arg, 16, "%d", root_pid);
 
-        if (execlp("./shellsort", "./shellsort", "-f", ifile, "-s", r_start_arg, "-e", r_end_arg,
+        int type = id_start%3;
+        if (type == 0) { //Shell sort
+            snprintf(exec_name, 64, "%s", "./shellsort");
+        } else if (type == 1) { //Quicksort
+            snprintf(exec_name, 64, "%s", "./quicksort");
+        } else { //Bubble sort
+            snprintf(exec_name, 64, "%s", "./bubblesort");
+        }
+
+        if (execlp(exec_name, exec_name, "-f", ifile, "-s", r_start_arg, "-e", r_end_arg,
          "-a", attr_num_arg, "-r", root_pid_arg, "-o", parent_pipe_name, NULL) < 0 ) {
             perror("Sorter exec fail ");
             return -1;

@@ -190,8 +190,9 @@ int main(int argc, char **argv)
         printf("Root complete. Run time (turnaround time) was %lf sec (REAL time) although we used the CPU for %lf sec (CPU time).\n",
         (t2 - t1) / ticspersec, cpu_time / ticspersec);
 
-        printf("SIGUSR2 count: %d\n", sig_usr2_count);
         printf("SIGUSR1 count: %d\n", sig_usr1_count);
+        printf("SIGUSR2 count: %d\n", sig_usr2_count);
+        printf("SIGALRM count: %d\n", sig_alrm_count);
 
     } else {
         /*
