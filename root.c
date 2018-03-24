@@ -36,13 +36,11 @@ void sig_handler(int signum) {
 int main(int argc, char **argv) 
 {
 	int opt;
-    //char depth[56], attr_num[56];
     int attr_num, depth, rand_range = 0;
     int argNum = 0;
     int record_count = 0;
     char ofile[64], ifile[256];
     int total_expected, usr1_expected, usr2_expected, alrm_expected;
-    //char *fifo = "./myfifo";
     //Set signal handlers
     if(signal(SIGALRM, sig_handler) == SIG_ERR) perror("Cannot catch SIGALRM ");
     if(signal(SIGUSR1, sig_handler) == SIG_ERR) perror("Cannot catch SIGUSR1 ");    
@@ -86,7 +84,6 @@ int main(int argc, char **argv)
             }
             output_fp = fopen(ofile, "w");
             if (output_fp==NULL) {
-                //printf("%s\n", optarg);
                 perror("Invalid output file name");
                 return -1;
             }
@@ -109,7 +106,7 @@ int main(int argc, char **argv)
             rand_range = 1;
             break;
 
-        default: /* '?' */
+        default: 
             fprintf(stderr, usage_msg, // In case of wrong options
                     argv[0]);
             exit(EXIT_FAILURE);
@@ -121,13 +118,7 @@ int main(int argc, char **argv)
                     argv[0]);
         exit(EXIT_FAILURE);
     }
-/*
-    int p[2];
-    if (pipe(p) == -1) {
-        perror("Root pipe error: ");
-        return -1;
-    }
-*/
+
     tax_rec buf[100];
     int nread;
     do {
@@ -150,9 +141,7 @@ int main(int argc, char **argv)
     printf("root pid: %d\n", getpid());
 
     if (fork() != 0) {
-        //printf("I'm the root!\n");
-        //close(p[1]); //Parent closes writing end
-
+        
         //Start timer
         double t1, t2, cpu_time;
         struct tms tb1, tb2;
@@ -168,13 +157,7 @@ int main(int argc, char **argv)
         FILE* input_fp = fopen(pipe_name, "r"); //Open read end of named pipe
         nread = fread(records, sizeof(tax_rec), record_count, input_fp);
         printf("Records read: %d\n", nread);
-/*
-        tax_rec record;
-        for (int i=0; i<nread; i++){
-            record = records[i];
-            printf("id: %d, name: %s %s, income: %f\n", record.id, record.fname, record.lname, record.income);
-        }
-*/
+
         int nwrite = fwrite(records, sizeof(tax_rec), nread, output_fp);
         printf("Records written: %d\n", nwrite);
 
@@ -209,13 +192,7 @@ int main(int argc, char **argv)
             usr2_missing, alrm_missing);
 
     } else {
-        /*
-        close(p[0]); //Child closes reading end
-        if(dup2(p[1], 1) < 0) { //Redirect sdout to pipe
-            perror("Dup2 error: ");
-            return -1;
-        }*/
-
+        
         char depth_arg[64], attr_num_arg[64], record_count_arg[64];
         snprintf(depth_arg, 64, "%d", depth);
         snprintf(attr_num_arg, 64, "%d", attr_num);
@@ -227,7 +204,6 @@ int main(int argc, char **argv)
             if (execlp("./node", "./node", "-d", depth_arg, "-a", attr_num_arg, "-o", pipe_name,
             "-f", ifile, "-n", record_count_arg, "-r", NULL) == -1) perror("Exec failed ");
         }
-        //if (execlp("./node", "./node", "-d", "3", "-a", "0", NULL) == -1) perror("Exec failed ");
     }
 
     return 0;

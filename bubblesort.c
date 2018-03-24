@@ -92,15 +92,6 @@ int main(int argc, char **argv) {
 
 	bubblesort(records, nread, attr_num);
 	
-
-    //FILE *parent_fp = fdopen(parent_wpipe, "w");
-/*
-   	for (int i=0; i<nread; i++){
-		record = records[i];
-		printf("id: %d, name: %s %s, income: %f\n", record.id, record.fname, record.lname, record.income);
-	}
-    printf("\n");
-*/
     int nwrite = fwrite(records, sizeof(tax_rec), nread, parent_fp);
     printf("nwrite: %d\n", nwrite);
 
@@ -113,12 +104,6 @@ int main(int argc, char **argv) {
 
 	free(records);
 
-
-	//char * msg = "blahblahblahblahblah\n";
-	//write(parent_wpipe, msg, strlen(msg));
-	//msg = "I'm a sorter!\n";
-	//write(1, msg, strlen(msg));
-	//close(parent_wpipe);
     fclose(parent_fp);
     if (root_pid_set) {
     	int signum;

@@ -66,7 +66,7 @@ int main(int argc, char **argv)
             rand_range = 1;
             break;
 
-        default: /* '?' */
+        default: 
             fprintf(stderr, usage_msg, // In case of wrong options
                     argv[0]);
             exit(EXIT_FAILURE);
@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 
     pid_t root_pid = getppid();
 
-    printf("parent pid: %d\n", root_pid);
+    //printf("parent pid: %d\n", root_pid);
 
     int p[2];
     int c1_rpipe;
@@ -188,76 +188,14 @@ int main(int argc, char **argv)
             perror("Sorter exec fail ");
             return -1;
         }
-    /*//Sorter code
-    	FILE *fp = fopen("test_data/test_data_100000.bin", "rb");
-		tax_rec * records;
-		tax_rec record;
-		if (!fp) {
-			perror("File open failed: ");
-			close(parent_wpipe);
-			return -1;
-		}
-
-		int nrecords = r_end - r_start + 1;
-		records = malloc(nrecords*sizeof(tax_rec));
-
-        fseek(fp, r_start*sizeof(tax_rec), SEEK_SET);
-		int nread = fread(records, sizeof(tax_rec), nrecords, fp);
-        fclose(fp);
-
-		//quicksort(records, nread, attr_num);
-        shellsort(records, nread, attr_num);
-
-        //FILE *parent_fp = fdopen(parent_wpipe, "w");
-
-	   	for (int i=0; i<nread; i++){
-			record = records[i];
-			printf("id: %d, name: %s %s, income: %f\n", record.id, record.fname, record.lname, record.income);
-		}
-        printf("\n");
-
-        int nwrite = fwrite(records, sizeof(tax_rec), nread, parent_fp);
-        //printf("nwrite: %d\n", nwrite);
-
-        //Report time
-        t2 = (double) times(&tb2);
-        cpu_time = (double) ((tb2.tms_utime + tb2.tms_stime) -
-        (tb1.tms_utime + tb1.tms_stime));
-        printf("Quick sort complete. Run time was %lf sec (REAL time) although we used the CPU for %lf sec (CPU time).\n",
-        (t2 - t1) / ticspersec, cpu_time / ticspersec);
-
-		free(records);
-
-
-    	//char * msg = "blahblahblahblahblah\n";
-    	//write(parent_wpipe, msg, strlen(msg));
-    	//msg = "I'm a sorter!\n";
-    	//write(1, msg, strlen(msg));
-    	//close(parent_wpipe);
-        fclose(parent_fp);
-        kill(root_pid, SIGUSR2);
-        printf("Sent sig to %d\n", root_pid);*/
+    
     } else {
     	int nrecords = r_end - r_start + 1;
-    	//char msg[BUF_SIZE];
-    	//snprintf(msg, 256, "I'm a merger! %d\n", depth);
     	tax_rec* result_buf = (tax_rec*) malloc( (nrecords+2) * sizeof(tax_rec) ); //Buffer for merged result
     	tax_rec* c1_buf = (tax_rec*) malloc( (r_mid-r_start+1) * sizeof(tax_rec) ); 
     	tax_rec* c2_buf = result_buf + (r_mid-r_start + 1); //Leave enough space at start of array for merging
-    	//char c2_buf[BUF_SIZE];
     	int c1_nread = 0 , c2_nread = 0;
 
-    	/*
-    	do {
-    		c1_nread = read(c1_rpipe, c1_buf, BUF_SIZE);
-    		c2_nread = read(c2_rpipe, c2_buf, BUF_SIZE);
-    		//write(parent_wpipe, c1_buf, c1_read);
-    		//write(parent_wpipe, c2_buf, c2_read);
-    	} while(c1_nread || c2_nread);
-
-        printf("c1 read: %d\n", c1_nread);
-        printf("c2 read: %d\n", c2_nread);
-    	*/
         FILE *c1_fp, *c2_fp;
         if (depth == 1) {
             c1_fp = fopen(c1_name, "r");
@@ -275,6 +213,7 @@ int main(int argc, char **argv)
     		return -1;
     	}
         int c1_i = 0, c2_i = 0;
+
         do{
         	c1_nread = fread(&c1_buf[c1_i], sizeof(tax_rec), (nrecords/2 + 1), c1_fp);
         	c2_nread = fread(&c2_buf[c2_i], sizeof(tax_rec), (nrecords/2 + 1), c2_fp);
@@ -283,26 +222,7 @@ int main(int argc, char **argv)
         } while(c1_nread || c2_nread);
 
         tax_rec record;
-/*        for (int i=0; i<c1_i; i++){
-            record = c1_buf[i];
-            printf("child 1: id: %d, name: %s %s, income: %f\n", record.id, record.fname, record.lname, record.income);
-        }
 
-        for (int i=0; i<c2_i; i++){
-            record = c2_buf[i];
-            printf("child 2: id: %d, name: %s %s, income: %f\n", record.id, record.fname, record.lname, record.income);
-        }
-*/
-
-        
-        //printf("nrecords: %d\n", nrecords);
-        //printf("depth: %d  ", depth);
-        //printf("c1 read: %d\n", c1_i);
-        //printf("c2 read: %d\n", c2_i);
-
-
-    	//snprintf(msg, 256, "I'm a merger! depth: %d c1: %d c2: %d\n", depth, c1_read, c2_read);
-	    //write(1, msg, strlen(msg));
     	fclose(c1_fp);
     	fclose(c2_fp);
 
@@ -313,12 +233,7 @@ int main(int argc, char **argv)
             perror("Pipe stream error ");
             return -1;
         }
-/*
-        for (int i=0; i<c1_i+c2_i; i++){
-            record = result_buf[i];
-            printf("id: %d, name: %s %s, income: %f\n", record.id, record.fname, record.lname, record.income);
-        }
-*/
+
     	fwrite(result_buf, sizeof(tax_rec), (c1_i+c2_i), parent_fp);
 
         //Report time
@@ -330,8 +245,7 @@ int main(int argc, char **argv)
 
         free(c1_buf);
         free(result_buf);
-    	//write(parent_wpipe, c2_buf, c2_read);
-    	//close(parent_wpipe);
+    	
         fclose(parent_fp);
         if (depth == 1) { //Nodes immediately above leaves clean up named pipes
             if(unlink(c1_name) < 0) {
