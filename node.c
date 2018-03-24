@@ -7,20 +7,26 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <string.h>
+#include <time.h>
 #include "./record.c"
 #include "./merge.h"
 
 #define BUF_SIZE 4096
 
+int r_rand(int rmin, int rmax) { //Returns random number between rmin and rmax (inclusive)
+    if (rmax <= rmin) return rmin;
+    return rand()%(rmax - rmin + 1) + rmin;
+}
+
 int main(int argc, char **argv) 
 {	
-	int attr_num, depth;
+	int attr_num, depth, rand_range = 0;
 	int argNum = 0;
-	int r_start = 0, r_end;
+	int r_start = 0, r_end, r_mid;
 	int opt;
-	char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number] [-f file to sort] [-n number of records]\n";
+	char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number] [-f file to sort] [-n number of records] [-r]\n";
     char parent_pipe_name[64], ifile[256];
-    while ((opt = getopt(argc, argv, "d:a:o:f:n:")) != -1) { // Use getopt to parse commandline arguments
+    while ((opt = getopt(argc, argv, "d:a:o:f:n:r")) != -1) { // Use getopt to parse commandline arguments
         switch (opt) { 
         case 'd':
             depth = atoi(optarg);
@@ -53,6 +59,10 @@ int main(int argc, char **argv)
             argNum++;
             break;
 
+        case 'r':
+            rand_range = 1;
+            break;
+
         default: /* '?' */
             fprintf(stderr, usage_msg, // In case of wrong options
                     argv[0]);
@@ -65,6 +75,8 @@ int main(int argc, char **argv)
                     argv[0]);
         exit(EXIT_FAILURE);
     }
+
+    srand(time(0));
 
     pid_t root_pid = getppid();
 
@@ -95,6 +107,12 @@ int main(int argc, char **argv)
             }
         }
 
+        if (rand_range) {
+            r_mid = r_rand(r_start, r_end - 1); //Random range
+        } else {
+            r_mid = (r_start + r_end)/2; //Half-half
+        }
+
     	if (fork() != 0) { //If is parent, fork again
     		close(p[1]); //Parent closes writing end
     		c1_rpipe = p[0]; 
@@ -112,7 +130,7 @@ int main(int argc, char **argv)
                     strncpy(parent_pipe_name, c2_name, 64);
                 }
     			close(p[0]);
-    			r_start = (r_start + r_end)/2 + 1; //Take second half of range
+    			r_start = r_mid + 1; //Take second half of range
     			parent_wpipe = p[1];
     		}
     	} else {
@@ -120,7 +138,7 @@ int main(int argc, char **argv)
                 strncpy(parent_pipe_name, c1_name, 64);
             }
     		close(p[0]); //Child 1 closes reading end
-    		r_end = (r_start + r_end)/2; //Take first half of range
+    		r_end = r_mid; //Take first half of range
     		parent_wpipe = p[1];
     	}
     }
@@ -205,8 +223,8 @@ int main(int argc, char **argv)
     	//char msg[BUF_SIZE];
     	//snprintf(msg, 256, "I'm a merger! %d\n", depth);
     	tax_rec* result_buf = (tax_rec*) malloc( (nrecords+2) * sizeof(tax_rec) ); //Buffer for merged result
-    	tax_rec* c1_buf = (tax_rec*) malloc( (nrecords/2 + 1) * sizeof(tax_rec) ); 
-    	tax_rec* c2_buf = result_buf + (nrecords/2 + 1); 
+    	tax_rec* c1_buf = (tax_rec*) malloc( (r_mid-r_start+1) * sizeof(tax_rec) ); 
+    	tax_rec* c2_buf = result_buf + (r_mid-r_start + 1); //Leave enough space at start of array for merging
     	//char c2_buf[BUF_SIZE];
     	int c1_nread = 0 , c2_nread = 0;
 

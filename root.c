@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 {
 	int opt;
     //char depth[56], attr_num[56];
-    int attr_num, depth;
+    int attr_num, depth, rand_range = 0;
     int argNum = 0;
     int record_count = 0;
     char ofile[64], ifile[256];
@@ -52,8 +52,8 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number] [-f File to sort]\n";
-    while ((opt = getopt(argc, argv, "d:a:o:f:")) != -1) { // Use getopt to parse commandline arguments
+    char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number] [-f File to sort] [-r if each sorter takes randomized range]\n";
+    while ((opt = getopt(argc, argv, "d:a:o:f:r")) != -1) { // Use getopt to parse commandline arguments
         //TODO: take in number of records as argument
         switch (opt) {
         case 'd':
@@ -97,6 +97,10 @@ int main(int argc, char **argv)
                 return -1;
             }
             argNum++;
+            break;
+
+        case 'r':
+            rand_range = 1;
             break;
 
         default: /* '?' */
@@ -201,8 +205,13 @@ int main(int argc, char **argv)
         snprintf(depth_arg, 64, "%d", depth);
         snprintf(attr_num_arg, 64, "%d", attr_num);
         snprintf(record_count_arg, 64, "%d", record_count);
-        if (execlp("./node", "./node", "-d", depth_arg, "-a", attr_num_arg, "-o", pipe_name,
-        "-f", ifile, "-n", record_count_arg, NULL) == -1) perror("Exec failed ");
+        if (!rand_range) {
+            if (execlp("./node", "./node", "-d", depth_arg, "-a", attr_num_arg, "-o", pipe_name,
+            "-f", ifile, "-n", record_count_arg, NULL) == -1) perror("Exec failed ");
+        } else { //Randomized range
+            if (execlp("./node", "./node", "-d", depth_arg, "-a", attr_num_arg, "-o", pipe_name,
+            "-f", ifile, "-n", record_count_arg, "-r", NULL) == -1) perror("Exec failed ");
+        }
         //if (execlp("./node", "./node", "-d", "3", "-a", "0", NULL) == -1) perror("Exec failed ");
     }
 
