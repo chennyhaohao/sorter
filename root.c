@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <math.h>
 #include "./record.c"
 
 
@@ -40,6 +41,7 @@ int main(int argc, char **argv)
     int argNum = 0;
     int record_count = 0;
     char ofile[64], ifile[256];
+    int total_expected, usr1_expected, usr2_expected, alrm_expected;
     //char *fifo = "./myfifo";
     //Set signal handlers
     if(signal(SIGALRM, sig_handler) == SIG_ERR) perror("Cannot catch SIGALRM ");
@@ -63,6 +65,10 @@ int main(int argc, char **argv)
                 return -1;
             }
             argNum++;
+            total_expected = (int) (pow(2, depth) + 0.5);
+            usr1_expected = (total_expected + 2)/3;
+            usr2_expected = (total_expected + 1)/3;
+            alrm_expected = total_expected/3;
             break;
 
         case 'a':
@@ -190,9 +196,17 @@ int main(int argc, char **argv)
         printf("Root complete. Run time (turnaround time) was %lf sec (REAL time) although we used the CPU for %lf sec (CPU time).\n",
         (t2 - t1) / ticspersec, cpu_time / ticspersec);
 
-        printf("SIGUSR1 count: %d\n", sig_usr1_count);
-        printf("SIGUSR2 count: %d\n", sig_usr2_count);
-        printf("SIGALRM count: %d\n", sig_alrm_count);
+        printf("SIGUSR1 received: %d\n", sig_usr1_count);
+        printf("SIGUSR2 received: %d\n", sig_usr2_count);
+        printf("SIGALRM received: %d\n", sig_alrm_count);
+
+        int total_missing = total_expected - sig_usr1_count - sig_usr2_count -sig_alrm_count;
+        int usr1_missing = usr1_expected - sig_usr1_count;
+        int usr2_missing = usr2_expected - sig_usr2_count;
+        int alrm_missing = alrm_expected - sig_alrm_count;
+
+        printf("Signal missing: %d (SIGUSR1: %d, SIGUSR2: %d, SIGALRM: %d)\n", total_missing, usr1_missing, 
+            usr2_missing, alrm_missing);
 
     } else {
         /*

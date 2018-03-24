@@ -1,7 +1,7 @@
 all: node myapp quicksort shellsort bubblesort
 
 myapp: root.c
-	gcc root.c -o myapp
+	gcc root.c -lm -o myapp
 
 node: compare.o merge.o node.o
 	gcc compare.o node.o merge.o -lm -o node
