@@ -46,7 +46,7 @@ int cmp_rec(tax_rec* rec1, tax_rec* rec2, int sort_by) {
 	}
 }
 
-int shellsort(tax_rec* arr, int nitems, int sort_by) {
+int shellsort(tax_rec* arr, int nitems, int sort_by) { //Based in part on code at: https://www.geeksforgeeks.org/shellsort/
 	if (sort_by < 0 || sort_by > 3) return -1;
 
 	for (int gap = nitems/2; gap > 0; gap /= 2)
@@ -83,7 +83,7 @@ void swap(tax_rec *xp, tax_rec *yp)
 }
 
 // A function to implement bubble sort
-void bubblesort(tax_rec * arr, int nitems, int sort_by)
+void bubblesort(tax_rec * arr, int nitems, int sort_by) //Based in part on code at: https://www.geeksforgeeks.org/bubblesort/
 {
    int i, j;
    for (i = 0; i < nitems-1; i++)      

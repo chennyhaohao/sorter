@@ -54,7 +54,6 @@ int main(int argc, char **argv)
 
     char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number] [-f File to sort] [-r if each sorter takes randomized range]\n";
     while ((opt = getopt(argc, argv, "d:a:o:f:r")) != -1) { // Use getopt to parse commandline arguments
-        //TODO: take in number of records as argument
         switch (opt) {
         case 'd':
             depth = atoi(optarg);
@@ -140,7 +139,7 @@ int main(int argc, char **argv)
 
     printf("root pid: %d\n", getpid());
 
-    if (fork() != 0) {
+    if (fork() != 0) { //Parent reads results from child and writes to output
         
         //Start timer
         double t1, t2, cpu_time;
@@ -191,7 +190,7 @@ int main(int argc, char **argv)
         printf("Signal missing: %d (SIGUSR1: %d, SIGUSR2: %d, SIGALRM: %d)\n", total_missing, usr1_missing, 
             usr2_missing, alrm_missing);
 
-    } else {
+    } else { //Child executes node executable
         
         char depth_arg[64], attr_num_arg[64], record_count_arg[64];
         snprintf(depth_arg, 64, "%d", depth);

@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 	int argNum = 0;
 	int r_start = 0, r_end, r_mid;
 	int opt;
-    int id_start = 0, id_range;
+    int id_start = 0, id_range; //id's to determine which type of sort to use at leaf
 	char * usage_msg = "Usage: %s [-d Depth of binary tree] [-a Attribute Number] [-f file to sort] [-n number of records] [-r]\n";
     char parent_pipe_name[64], ifile[256];
     while ((opt = getopt(argc, argv, "d:a:o:f:n:r")) != -1) { // Use getopt to parse commandline arguments
@@ -83,7 +83,6 @@ int main(int argc, char **argv)
 
     pid_t root_pid = getppid();
 
-    //printf("parent pid: %d\n", root_pid);
 
     int p[2];
     int c1_rpipe;
@@ -92,8 +91,8 @@ int main(int argc, char **argv)
     char c1_name[64], c2_name[64];
     for (; depth > 0; depth--) { //An iterative approach to creating the hierarchy
         
-        if (depth == 1) {//Immediately above leaves
-            close(p[0]); //Use named pipe instead
+        if (depth == 1) {//Nodes immediately above leaves
+            //Use named pipe instead
             
             snprintf(c1_name, 64, "./pipe_%d_1", getpid());
             snprintf(c2_name, 64, "./pipe_%d_2", getpid());            
@@ -130,18 +129,18 @@ int main(int argc, char **argv)
     			if (depth!=1) close(p[1]);
     			c2_rpipe = p[0];
     			break;
-    		} else { //Child 2 closes reading end
+    		} else { //Child 2 
                 if (depth == 1) {
                     strncpy(parent_pipe_name, c2_name, 64);
                 } else {
-                    close(p[0]);
+                    close(p[0]); //Child 2 closes reading end
                     parent_wpipe = p[1];
                 }
     			r_start = r_mid + 1; //Take second half of range
-                id_range /= 2;
+                id_range /= 2; // Update id range
                 id_start += id_range;
     		}
-    	} else {
+    	} else { //Child 1
             if (depth == 1) {
                 strncpy(parent_pipe_name, c1_name, 64);
             } else {
@@ -149,7 +148,7 @@ int main(int argc, char **argv)
                 parent_wpipe = p[1];
             }
     		r_end = r_mid; //Take first half of range
-            id_range /= 2;
+            id_range /= 2; //Update id range
     	}
     }
 
@@ -167,14 +166,14 @@ int main(int argc, char **argv)
         parent_fp = fdopen(parent_wpipe, "w");
     }
 
-    if (depth == 0) { 
+    if (depth == 0) { //Leaves: execute sort executables
         char r_start_arg[16], r_end_arg[16], attr_num_arg[16], root_pid_arg[16], exec_name[64];
         snprintf(r_start_arg, 16, "%d", r_start);
         snprintf(r_end_arg, 16, "%d", r_end);
         snprintf(attr_num_arg, 16, "%d", attr_num);
         snprintf(root_pid_arg, 16, "%d", root_pid);
 
-        int type = id_start%3;
+        int type = id_start%3; //choose which sort to use determined by id
         if (type == 0) { //Shell sort
             snprintf(exec_name, 64, "%s", "./shellsort");
         } else if (type == 1) { //Quicksort
@@ -189,7 +188,7 @@ int main(int argc, char **argv)
             return -1;
         }
     
-    } else {
+    } else { //Mergers
     	int nrecords = r_end - r_start + 1;
     	tax_rec* result_buf = (tax_rec*) malloc( (nrecords+2) * sizeof(tax_rec) ); //Buffer for merged result
     	tax_rec* c1_buf = (tax_rec*) malloc( (r_mid-r_start+1) * sizeof(tax_rec) ); 
@@ -214,7 +213,7 @@ int main(int argc, char **argv)
     	}
         int c1_i = 0, c2_i = 0;
 
-        do{
+        do{ //Read from children
         	c1_nread = fread(&c1_buf[c1_i], sizeof(tax_rec), (nrecords/2 + 1), c1_fp);
         	c2_nread = fread(&c2_buf[c2_i], sizeof(tax_rec), (nrecords/2 + 1), c2_fp);
             c1_i += c1_nread;
@@ -227,7 +226,7 @@ int main(int argc, char **argv)
     	fclose(c2_fp);
 
 
-        merge(c1_buf, c2_buf, result_buf, c1_i, c2_i, attr_num);
+        merge(c1_buf, c2_buf, result_buf, c1_i, c2_i, attr_num); //Merge results from children
 
         if (parent_fp == NULL) {
             perror("Pipe stream error ");

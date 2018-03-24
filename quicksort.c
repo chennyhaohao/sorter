@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 	int nrecords = r_end - r_start + 1;
 	records = malloc(nrecords*sizeof(tax_rec));
 
-    fseek(fp, r_start*sizeof(tax_rec), SEEK_SET);
+    fseek(fp, r_start*sizeof(tax_rec), SEEK_SET); //Read from specified range
 	int nread = fread(records, sizeof(tax_rec), nrecords, fp);
     fclose(fp);
 
@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
 	free(records);
 
     fclose(parent_fp);
-    if (root_pid_set) {
+    if (root_pid_set) { //Send signal to root
     	int signum;
     	
     	signum = SIGUSR2;
